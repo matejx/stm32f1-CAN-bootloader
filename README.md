@@ -1,4 +1,4 @@
-#### STM32F1 CAN bootloader
+## STM32F1 CAN bootloader
 
 ### Overview
 

@@ -9,33 +9,30 @@ PG_SIZE = 1024
 BL_WBUF = 1
 BL_WPAGE = 2
 BL_WCRC = 3
+CANID_BL_CMD = 0xb0
+CANID_BL_RPL = 0xb1
 
 def canmsg(id, data):
-	if len(id) > 3:
-		raise ValueError("invalid id")
 	if len(data) > 8:
 		raise ValueError("invalid data")
 	d = bytearray(36) # initializes elements to zero
 	d[1] = 0x24 # = 36
 	d[3] = 0x80
 	d[21] = len(data)
-	for i in range(len(id)):
-		d[28-len(id)+i] = id[i]
-	for i in range(len(data)):
-		d[28+i] = data[i]
+	bid = id.to_bytes(4, 'big')
+	d[24:28] = bid
+	d[28:28+len(data)] = data
 	return d
 
 def bl_cmd(board_id, cmd, par1, par2):
 	d = bytearray(8)
 	d[0] = board_id
 	d[1] = cmd
-	d[2] = par1 & 0xff
-	d[3] = par1 >> 8
-	for i in range(4):
-	  d[4+i] = par2[3-i]
+	d[2:4] = par1.to_bytes(2, 'little')
+	d[4:8] = par2[::-1]
 	txsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 	txsock.settimeout(1)
-	txsock.sendto(canmsg(b'\xb0',d), (UDP_IP, UDP_TX_PORT))
+	txsock.sendto(canmsg(CANID_BL_CMD,d), (UDP_IP, UDP_TX_PORT))
 
 def bl_waitresp(rxsock, board_id, bl_cmd, to_sec):
 	absto = datetime.datetime.now() + datetime.timedelta(seconds=to_sec)
@@ -44,7 +41,7 @@ def bl_waitresp(rxsock, board_id, bl_cmd, to_sec):
 		can_dlc = udp_data[21]
 		can_id = struct.unpack('!I', udp_data[24:28])[0]
 		can_data = udp_data[28:36]
-		if (can_id == 0xb1) and (can_dlc >= 3) and (can_data[0] == board_id) and (can_data[1] == bl_cmd):
+		if (can_id == CANID_BL_RPL) and (can_dlc >= 3) and (can_data[0] == board_id) and (can_data[1] == bl_cmd):
 			return can_data[2]
 
 # -----------------------------------------------------------------------------

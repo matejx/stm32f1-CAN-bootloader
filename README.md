@@ -1,6 +1,6 @@
-##### STM32F1 CAN bootloader
+#### STM32F1 CAN bootloader
 
-#### Overview
+### Overview
 
 The CAN ID for all commands is 0xB0 (CANID_BOOTLOADER_CMD) and the bootloader replies to all commands with a status having CAN ID 0xB1 (CANID_BOOTLOADER_RPLY).
 
@@ -15,7 +15,7 @@ The CAN ID for all commands is 0xB0 (CANID_BOOTLOADER_CMD) and the bootloader re
   - uint16_t **par1**
   - uint32_t **par2**
 
-Each board appearing on the CAN bus should have a unique //board ID//. This assures you're actually talking to the board you want to be talking to.
+Each board appearing on the CAN bus should have a unique *board ID*. This assures you're actually talking to the board you want to be talking to.
 
 **Write page buffer:**
   - **offset** (par1), offset into the page buffer
@@ -31,17 +31,17 @@ Each board appearing on the CAN bus should have a unique //board ID//. This assu
 
 Page count and firmware CRC are stored in bootloader's persistent storage (an unused flash page at the end of bootloader code area). The bootloader will not execute the firmware if the CRC calculated from flash contents does not match the stored CRC.
 
-#### Programming
+### Programming
 
 **To program the application firmware:**
-  - Fill the entire page buffer 4 bytes at a time using several //Write page buffer// commands.
-  - Execute //Write page// command providing the correct page data CRC. The bootloader will compare your CRC to the CRC of its page buffer. If they match, it will flash the page.
+  - Fill the entire page buffer 4 bytes at a time using several *Write page buffer* commands.
+  - Execute *Write page* command providing the correct page data CRC. The bootloader will compare your CRC to the CRC of its page buffer. If they match, it will flash the page.
   - Repeat above steps for all pages.
-  - Finally execute //Write CRC// command providing the correct CRC for entire firmware. The bootloader will compare your CRC to the CRC of the MCU's flash. If they match, it will store the CRC in an unused page, allowing subsequent application execution.
+  - Finally execute *Write CRC* command providing the correct CRC for entire firmware. The bootloader will compare your CRC to the CRC of the MCU's flash. If they match, it will store the CRC in an unused page, allowing subsequent application execution.
 
 The entire procedure is implemented in **prg.py**. The script is written for PEAK System Ethernet to CAN gateway IPEH-004010, using its UDP-CAN translation capabilities. It will have to be adapted for other means of communicating with CAN devices (SocketCAN, SLCAN, ...).
 
-#### How the bootloader works
+### How the bootloader works
 
 When a Cortex-M3 CPU resets it loads the word at address 0x0 into SP and the next word (address 0x4) into PC. There is usually ROM at that address containing the manufacturer's bootloader. On STM32 CPUs, the application flash is mapped to 0x08000000 so the manufacturer's bootloader jumps there in a fashion that mimicks CPU reset, i.e. load SP from 0x08000000, load PC from 0x08000004. Instead of a normal application, a secondary "user bootloader" can be executed in its place and the actual application space is agreed upon to be elsewhere (0x08002000 in this case, i.e. the first 8k of flash are used by the bootloader). The bootloader initializes the CAN hardware and waits for CAN messages. If there are no CAN messages for a specified amount of time (NOCANRX_TO, default 5s), the bootloader checks if the stored application flash CRC equals actual flash contents and if so, runs the application.
 
@@ -62,7 +62,7 @@ The second method is implemented by this bootloader. The problem now becomes how
 ```
 The added call to PreSystemInit gives the bootloader a chance to execute some code before even SystemInit is called. As mentioned, the magic value has to be written outside bootloader's variable space. This is because these sections get initialized (.data) or zeroed (.bss) by startup code and any magic value written there would get overwritten.
 
-#### Changes to the application due to bootloader
+### Changes to the application due to bootloader
 
 Since the bootloader is now occupying the space where the application would normally be, the actual application needs to be changed to reflect this fact. The application developer needs to do two (or rather three) things:
   - Tell the linker the new address where the application resides.

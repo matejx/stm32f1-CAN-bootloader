@@ -48,6 +48,7 @@ When a Cortex-M3 CPU resets it loads the word at address 0x0 into SP and the nex
 Running the application is a bit trickier than simply jumping to its entry address. The application programmer rightfully assumes that the CPU was just reset and most of the peripherals are in a well known state (as specified in the datasheet). Because the bootloader was using some peripherals to communicate with the outside world, this is no longer the case. There are two methods (that I know of) of solving this issue:
   - undo the changes to peripheral registers and jump to application
   - reset the CPU and jump to application early, before initializing any peripherals
+
 The second method is implemented by this bootloader. The problem now becomes how to tell the bootloader that was just reset to jump to application code instead of proceeding normally. One approach is to have the bootloader sample a pin. This approach is often used by the manufacturer's bootloader. There's a downside however - starting the bootloader requires physical access to the board making remote updates impractical. Another approach is to leave a message in a bottle somewhere where it will survive a CPU reset. The most obvious way is to write a magic number to RAM since its contents are usually not explicitly zeroed or modified much between reset and very early boot. This is the approach used here. A RAM address outside bootloader's variable space is set to a magic value. Very early in bootloader execution, this RAM location is checked and if the correct magic value is found, a jump to the application code is made instead of proceeding with bootloader initialization and operation. To facilitate this process, the bootloader uses a modified startup assembly code.
 ```
 /* Bootloader support */
@@ -77,9 +78,9 @@ MEMORY
 RAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 20K
 FLASH (rx)     : ORIGIN = 0x08000000, LENGTH = 64K
 }
-</code>
+```
 Change flash to:
-<code>
+```
 FLASH (rx)     : ORIGIN = 0x08002000, LENGTH = 56K
 ```
 Secondly, relocate the vector table immediately upon entering main like this:
